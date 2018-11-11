@@ -1,0 +1,11 @@
+TODO
+
+- Standardise naming of functions
+
+- Add in safety checking to make sure we're not trying to write to a hard drive
+if using the command line.
+
+- Add progress bar when writing to drive
+
+
+
