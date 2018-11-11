@@ -42,7 +42,7 @@ class sabas(QMainWindow):
 
 	def __init__(self, parent=None):
 		super(sabas, self).__init__(parent)
-		# self.check_sudo()
+		self.check_sudo()
 		self.process_arguments(sys.argv)
 
 
@@ -217,9 +217,7 @@ class sabas(QMainWindow):
 		'''
 		fstat = os.stat(self.iso_filename)
 
-		filename = self.iso_filename.split("/")[-1]
-
-		file_stat = "Filename : " + filename + "\n" \
+		file_stat = "Filename : " + self.iso_filename + "\n" \
 					"Size : " + self.sabas_obj.convert_size(fstat.st_size) + "\n"
 					
 		
