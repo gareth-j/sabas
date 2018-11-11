@@ -9,7 +9,15 @@ sudo python sabas.py
 This will load the graphical interface that allows selection of the USB drive to write to and
 browsing for the required .iso file.
 
-It can also be used from the command line
+![Alt text](/img/main_window.png?raw=true "Main Window")
+
+If the "Check checksums" box is ticked the SHA1 hash of the ISO file will be requested for comparison
+with the one calculated by the program.
+
+![Alt text](/img/sha1_comparison.png?raw=true "SHA1 request")
+
+
+Sabas can also be used from the command line
 
 ```
 sudo python sabas.py -i openbsd_6p4.iso -o /dev/sdc
