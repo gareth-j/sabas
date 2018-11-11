@@ -23,5 +23,7 @@ PyQt5
 
 ### Acknowledgements
 
+Pete Batard - Rufus - https://github.com/pbatard/rufus - the excellent ISO writing tool
+
 Balazs Saros  - https://github.com/balzss - for the some inspiration for the drive information and mount checking
 functions
