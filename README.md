@@ -1,5 +1,5 @@
 # sabas
-A small ISO to USB writer for creating bootable USB drives
+A small ISO to USB writer for creating bootable USB drives on Linux
 
 ### Usage
 ```
@@ -27,7 +27,7 @@ This will then ask you confirm your selection and will then write the file to th
 
 ### Requirements
 
-PyQt5
+Python, PyQt5, Linux core utilities
 
 ### Acknowledgements
 
