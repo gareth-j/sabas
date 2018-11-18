@@ -1,5 +1,10 @@
+import sys
+import os
+import math
+import hashlib
+import argparse
 
-from PyQt5.QtCore import QDateTime, Qt, QTimer, pyqtSignal
+from PyQt5.QtCore import QDateTime, Qt, QTimer, pyqtSignal, QThreadPool
 from PyQt5.QtWidgets import (QFileDialog, QApplication, QCheckBox, QComboBox, QDateTimeEdit,
         QDial, QDialog, QGridLayout, QGroupBox, QHBoxLayout, QLabel, QLineEdit,
         QProgressBar, QPushButton, QRadioButton, QScrollBar, QSizePolicy,
@@ -7,17 +12,11 @@ from PyQt5.QtWidgets import (QFileDialog, QApplication, QCheckBox, QComboBox, QD
         QVBoxLayout, QWidget, QMainWindow, QMessageBox, QInputDialog)
 
 from PyQt5.QtGui import QPalette, QColor
-# import PyQt5.QtCore
-# import PyQt5.QtWidgets
 
-
-import sys
-import os
-import math
-import hashlib
-import argparse
 
 from sabas_core import sabas_core
+from sabas_threads import worker_signals, worker
+
 
 class sabas(QMainWindow):
 	
@@ -42,9 +41,8 @@ class sabas(QMainWindow):
 
 	def __init__(self, parent=None):
 		super(sabas, self).__init__(parent)
-		self.check_sudo()
+		# self.check_sudo()
 		self.process_arguments(sys.argv)
-
 
 	def check_sudo(self):
 		''' 
@@ -94,6 +92,7 @@ class sabas(QMainWindow):
 		else:
 			self.setup_gui()
 			self.initial_selection()
+			self.setup_threads()
 
 
 	def initial_selection(self):
@@ -104,6 +103,12 @@ class sabas(QMainWindow):
 
 		self.selectDrive(0)
 		self.refreshDriveInfo()	
+
+
+	def setup_threads(self):
+		# Create a threadpool
+		self.threadpool = QThreadPool()
+		print("Multithreading with maximum %d threads" % self.threadpool.maxThreadCount())
 
 	# Replace with actual get drive function
 	def get_drives(self):
@@ -306,8 +311,21 @@ class sabas(QMainWindow):
 			check_my_sum.setText("Error with checksum")
 			check_my_sum.exec()
 
+	# def progress_update(self, n):
+	# 	'''
+	# 		Updates the progress in the status bar
+	# 		and the progress bar when implemented
+	# 	'''
+	# 	self.update_statusbar()
+	def thread_complete(self):
+		self.update_statusbar("Finished writing.")
 
 	def write_usb(self):
+		'''	
+			Confirms the write decision with the user and then
+			spawns a new worker thread to call dd and write to the drive
+		'''
+
 		filename = self.iso_filename.split("/")[-1]
 
 		# Enter the checksum for comparison
@@ -320,9 +338,20 @@ class sabas(QMainWindow):
 		 								   QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
 
 		if confirmation == QMessageBox.Yes:
-			self.cancel_button.setDisabled(False)
+
 			self.update_statusbar("Writing to /dev/" + self.dev_name)
-			self.sabas_obj.write_dd(self.iso_filename)
+			self.cancel_button.setDisabled(False)
+
+			# Create the worker
+			dd_worker = worker(self.sabas_obj.write_dd(self.iso_filename))
+			# Connect it with the signals defined in the worker_signals class
+			# dd_worker.signals.result.connect(self.print_output)
+			dd_worker.signals.finished.connect(self.thread_complete)
+			dd_worker.signals.progress.connect(self.update_statusbar)
+
+			# Pass the worker to the threadpool to start work
+			self.threadpool.start(dd_worker)
+			
 			self.update_statusbar("Finished")
 			# Update the status bar with the output from dd
 
@@ -363,6 +392,7 @@ class sabas(QMainWindow):
 		self.confirmationBox = QGroupBox("File")
 
 		open_button = QPushButton("Open")
+
 		self.write_button = QPushButton("Write")
 
 		open_button.clicked.connect(self.fileOpenDialog)

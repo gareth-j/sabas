@@ -84,7 +84,9 @@ class sabas_core():
 			GUI or command line
 
 		'''
-		self.selection =  "/dev/" + self.drive_data[int(user_selection)][2]
+		self.drive_name = self.drive_data[int(user_selection)][2]
+
+		self.selection =  "/dev/" + drive_name
 
 		# print("Selected : " + self.selection)
 
@@ -105,6 +107,17 @@ class sabas_core():
 			user_selection = input("Please select a drive number : ")
 
 		self.set_selection(user_selection)
+
+	def hd_check(self):
+		'''
+			Checks to make sure the selected drive isn't a hard-drive
+		'''
+		drive_name = self.selection.split("/")[-1]
+
+		result = subprocess.check_output("find /dev/disk/by-id/ -lname " + "'*" + drive_name + "'", shell=True).decode("utf-8")
+
+		if "usb" not in result:
+			raise ValueError("Error : this is not a USB drive.")
 
 
 	def mount_checks(self):
@@ -221,5 +234,6 @@ class sabas_core():
 		if self.cline_flag == False:
 			self.drive_selection()
 		self.mount_checks()
+		self.hd_check()
 		self.write_cline()
 		exit()
