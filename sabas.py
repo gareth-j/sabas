@@ -4,7 +4,7 @@ import math
 import hashlib
 import argparse
 
-from PyQt5.QtCore import QDateTime, Qt, QTimer, pyqtSignal, QThreadPool
+from PyQt5.QtCore import QDateTime, Qt, QTimer, pyqtSignal, QThreadPool, QProcess
 from PyQt5.QtWidgets import (QFileDialog, QApplication, QCheckBox, QComboBox, QDateTimeEdit,
         QDial, QDialog, QGridLayout, QGroupBox, QHBoxLayout, QLabel, QLineEdit,
         QProgressBar, QPushButton, QRadioButton, QScrollBar, QSizePolicy,
@@ -15,8 +15,6 @@ from PyQt5.QtGui import QPalette, QColor
 
 
 from sabas_core import sabas_core
-from sabas_threads import worker_signals, worker
-
 
 class sabas(QMainWindow):
 	
@@ -49,7 +47,7 @@ class sabas(QMainWindow):
 			Checks the uid of the running process to check if
 			we have sudo priviliges for dd
 		'''
-		if(os.getuid() > 0):
+		if os.getuid() > 0:
 			raise ValueError("Please run with sudo.")
 
 
@@ -156,6 +154,7 @@ class sabas(QMainWindow):
 		self.createDriveInfoBox()
 		self.createISOInfoBox()
 		self.createConfirmationBox()
+		self.createProgressBar()
 
 		# Put this into a View menu
 		# self.useStylePaletteCheckBox.toggled.connect(self.changePalette)
@@ -170,6 +169,8 @@ class sabas(QMainWindow):
 		mainLayout.addWidget(self.DriveInfoBox, 1, 0)
 		mainLayout.addWidget(self.ISOInfoBox, 1, 1)
 		mainLayout.addWidget(self.confirmationBox, 2, 0)
+		mainLayout.addWidget(self.progress_bar, 2, 1)
+
 
 		mainLayout.setRowStretch(0, 1)
 		mainLayout.setRowStretch(1, 1)
@@ -182,6 +183,9 @@ class sabas(QMainWindow):
 		# Set a status bar
 		self.statusbar = self.statusBar()
 		self.update_statusbar("Ready")
+
+		# Create a process for writing
+		self.write_process = QProcess(self)
 		
 		wid.setLayout(mainLayout)
 
@@ -213,17 +217,19 @@ class sabas(QMainWindow):
 		'''
 		self.statusbar.showMessage(str(sbar_text))
 
-	def getFileInfo(self):
+	def get_file_info(self):
 		'''	
 			Returns a properly formatted string of text
 			to be used in ISODetailText() and createISOInfoBox()
 
 			Return : string
 		'''
-		fstat = os.stat(self.iso_filename)
+
+		# Save this for use with progress bar
+		self.iso_fstat = os.stat(self.iso_filename)
 
 		file_stat = "Filename : " + self.iso_filename + "\n" \
-					"Size : " + self.sabas_obj.convert_size(fstat.st_size) + "\n"
+					"Size : " + self.sabas_obj.convert_size(self.iso_fstat.st_size) + "\n"
 					
 		
 
@@ -294,7 +300,7 @@ class sabas(QMainWindow):
 			Refreshes the file information about the selected ISO
 		'''
 		# print("Refreshing file info")
-		self.file_info = self.getFileInfo()
+		self.file_info = self.get_file_info()
 		self.ISODetailText.setPlainText(self.file_info)
 
 	def compare_checksums(self):
@@ -311,19 +317,11 @@ class sabas(QMainWindow):
 			check_my_sum.setText("Error with checksum")
 			check_my_sum.exec()
 
-	# def progress_update(self, n):
-	# 	'''
-	# 		Updates the progress in the status bar
-	# 		and the progress bar when implemented
-	# 	'''
-	# 	self.update_statusbar()
-	def thread_complete(self):
-		self.update_statusbar("Finished writing.")
 
 	def write_usb(self):
 		'''	
 			Confirms the write decision with the user and then
-			spawns a new worker thread to call dd and write to the drive
+			calls dd to write to the drive
 		'''
 
 		filename = self.iso_filename.split("/")[-1]
@@ -341,20 +339,32 @@ class sabas(QMainWindow):
 
 			self.update_statusbar("Writing to /dev/" + self.dev_name)
 			self.cancel_button.setDisabled(False)
+			self.do_write()
 
-			# Create the worker
-			dd_worker = worker(self.sabas_obj.write_dd(self.iso_filename))
-			# Connect it with the signals defined in the worker_signals class
-			# dd_worker.signals.result.connect(self.print_output)
-			dd_worker.signals.finished.connect(self.thread_complete)
-			dd_worker.signals.progress.connect(self.update_statusbar)
 
-			# Pass the worker to the threadpool to start work
-			self.threadpool.start(dd_worker)
-			
-			self.update_statusbar("Finished")
-			# Update the status bar with the output from dd
+	def get_status(self):
+		# As readAll returns a QByteArray we need to decode it
+		dd_bytes = self.write_process.readAll()
+		dd_output = str(dd_bytes.data(), encoding="utf-8")
+		
+		# Update progress bar and the statusbar
+		self.update_progress(dd_output)
+		self.update_statusbar(dd_output)
 
+
+	def do_write(self):
+		# So we read everything coming out of dd
+		self.write_process.setProcessChannelMode(QProcess.MergedChannels)		
+
+		self.sabas_obj.write_dd(self.iso_filename, self.write_process)
+
+		# self.write_process.start("ping 127.0.0.1")
+
+		self.write_process.readyRead.connect(self.get_status)
+
+		# self.write_process.started.connect(lambda: self.write_button.setEnabled(False))
+		self.write_process.finished.connect(lambda: self.update_statusbar("Finished"))
+	
 
 
 	# Top right
@@ -380,7 +390,7 @@ class sabas(QMainWindow):
 		try:
 			fname = QFileDialog.getOpenFileName(self, 'Open file', '~')
 			self.iso_filename = fname[0]
-			self.file_info = self.getFileInfo()
+			self.file_info = self.get_file_info()
 			# Refresh the file information box
 			self.write_button.setDisabled(False)
 			self.refreshFileInfo()
@@ -391,13 +401,23 @@ class sabas(QMainWindow):
 	def createConfirmationBox(self):
 		self.confirmationBox = QGroupBox("File")
 
+		# Make some buttons
 		open_button = QPushButton("Open")
-
 		self.write_button = QPushButton("Write")
+		self.cancel_button = QPushButton("Cancel")
 
+		# Connect some buttons
 		open_button.clicked.connect(self.fileOpenDialog)
 		self.write_button.clicked.connect(self.write_usb)
+
+		# This should cancel the dd process
+
+		# self.cancel_button.clicked.connect()
+
+		# As we don't have anything to write or cancel initially
+		# disable these buttons
 		self.write_button.setDisabled(True)
+		self.cancel_button.setDisabled(True)
 				
 		# Horizontal baby
 		confLayout = QHBoxLayout()
@@ -407,21 +427,35 @@ class sabas(QMainWindow):
 
 		self.confirmationBox.setLayout(confLayout)
 
-	def update_progress(self):
-		# Read the data from dd - take the amount of data copied and 
-		# the file size and then use the transfer rate to update the progress
-		# bar
-		self.progressBar.setValue(0)
-
 
 	def createProgressBar(self):
-		self.progressBar = QProgressBar()
-		self.progressBar.setRange(0, 10000)
-		self.progressBar.setValue(0)
+		self.progress_bar = QProgressBar()
+		self.progress_bar.setRange(0, 100)
+		self.progress_bar.setValue(0)
+	
 
-		timer = QTimer(self)
-		timer.timeout.connect(self.advanceProgressBar)
-		timer.start(1000)
+	def update_progress(self, dd_output):
+		'''
+			Uses the amount of data transferred by dd to calculate the progress
+			of the transfer
+		'''
+		# Get the size of the file in bytes
+		iso_in_bytes = self.iso_fstat.st_size
+
+		dd_list = dd_output.split()
+
+		progress = 0
+
+		# The first output from dd is an empty string to we want to ignore that
+		if len(dd_list) > 0:
+			bytes_written = dd_list[0]
+
+			if bytes_written.isdigit():
+				progress = 100 * (int(bytes_written)/int(iso_in_bytes));
+
+		self.progress_bar.setValue(progress)
+
+
 
 
 

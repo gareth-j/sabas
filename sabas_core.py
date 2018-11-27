@@ -22,6 +22,7 @@ class sabas_core():
 		# Handle Ctrl-C a bit more cleanly
 		signal.signal(signal.SIGINT, self.signal_handler)
 
+
 	def signal_handler(self, sig, frame):
 		print('\n\nYou pressed Ctrl+C. Exiting.\n')
 		exit()
@@ -86,7 +87,7 @@ class sabas_core():
 		'''
 		self.drive_name = self.drive_data[int(user_selection)][2]
 
-		self.selection =  "/dev/" + drive_name
+		self.selection =  "/dev/" + self.drive_name
 
 		# print("Selected : " + self.selection)
 
@@ -206,27 +207,27 @@ class sabas_core():
 			confirmation = input("Are you sure you want to continue and write " + self.iso_filename + "to " + self.selection + "? [y / n] : ")
 			# print(confirmation)
 		if confirmation == "y" or confirmation == "Y":
-			self.write_dd()
+			self.write_dd(self.iso_filename)
 			
 		elif confirmation == "n" or confirmation == "N":
 			print("Exiting.")
 			exit()
 
-	def write_dd(self, filename = None):
+	# def write_dd(self, filename, progress_callback):
+	def write_dd(self, filename, write_process = None):
 		'''
 			Does the actual writing, this can be called from either the command
 			line or the GUI
 		'''
-		our_filename = ""
-		if filename:
-			our_filename = filename
-		else:
-			our_filename = self.iso_filename
+		our_filename = filename
 
-		try:
-			self.status = subprocess.check_output("sudo dd bs=4M if=" + our_filename + " of=" + self.selection + " status=progress oflag=sync", shell=True)
-		except subprocess.CalledProcessError as err:
-			print("Error writing to device. Error : " + err.output)
+		write_process.start("sudo dd bs=4M if=" + our_filename + " of=" + self.selection + " status=progress oflag=sync")
+
+		# try:
+			# result = subprocess.check_output("sudo dd bs=4M if=" + our_filename + " of=" + self.selection + " status=progress oflag=sync", shell=True)
+
+		# except subprocess.CalledProcessError as err:
+		# 	print("Error writing to device. Error : " + err.output)
 
 	def run(self):
 		# self.process_arguments(arguments)
