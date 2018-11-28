@@ -364,7 +364,6 @@ class sabas(QMainWindow):
 		if confirmation == QMessageBox.Yes:
 
 			self.update_statusbar("Writing to /dev/" + self.dev_name)
-			self.cancel_button.setDisabled(False)
 			self.do_write()
 
 
