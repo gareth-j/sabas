@@ -16,6 +16,10 @@ with the one calculated by the program.
 
 ![Alt text](/img/sha1_comparison.png?raw=true "SHA1 request")
 
+Write information and progress are displayed
+
+![Alt text](/img/writing_progress.png?raw=true "Write progress")
+
 
 Sabas can also be used from the command line
 
