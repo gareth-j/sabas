@@ -7,6 +7,13 @@ import hashlib
 import math
 
 class sabas_core():
+	'''
+	The core of the program that does most of the work
+
+	The functions in this class can be used straight from the command line
+	though sabas.py by passing command line arguments
+	'''
+
 	
 	# Some useful member variables
 	# Hold the drive data for access by other functions	
@@ -61,9 +68,9 @@ class sabas_core():
 
 	def create_drive_list(self):
 		''' 
-			 Creates a list of drives that can be used by the interface or the command line
+		 Creates a list of drives that can be used by the interface or the command line
 
-			 Returns the list of drives found
+		 Returns the list of drives found
 		'''
 
 		drive_list = []
@@ -75,10 +82,10 @@ class sabas_core():
 
 	def set_selection(self, user_selection):
 		''' 
-			Can be called from the command line by drive_selection or
-			from the GUI from the combobox
+		Can be called from the command line by drive_selection or
+		from the GUI from the combobox
 
-			GUI or command line
+		GUI or command line
 
 		'''
 		self.drive_name = self.drive_data[int(user_selection)][2]
@@ -88,9 +95,9 @@ class sabas_core():
 
 	def drive_selection(self):
 		'''
-			Asks the user to select the USB drive they want to write to
+		Asks the user to select the USB drive they want to write to
 
-			Command line only
+		Command line only
 
 		'''
 		print('List of your USB drives:\n')
@@ -105,9 +112,8 @@ class sabas_core():
 
 
 	def hd_check(self):
-		'''
-			Checks to make sure the selected drive isn't a hard-drive
-		'''
+		'''Checks to make sure the selected drive isn't a hard-drive'''
+
 		drive_name = self.selection.split("/")[-1]
 
 		result = subprocess.check_output("find /dev/disk/by-id/ -lname " + "'*" + drive_name + "'", shell=True).decode("utf-8")
@@ -118,9 +124,9 @@ class sabas_core():
 
 	def mount_checks(self):
 		'''
-			Checks the status of the selected drive and its mount status	
+		Checks the status of the selected drive and its mount status	
 
-			Attempts to unmount the selected drive
+		Attempts to unmount the selected drive
 		'''
 			
 		print("Checking if " + self.selection + " is mounted...")
@@ -147,9 +153,8 @@ class sabas_core():
 	# This is a modified version of a function taken from
 	# https://stackoverflow.com/a/22058673/10354589
 	def get_checksum(self, filename):
-		'''
-			Returns the SHA1 hashsum of the file
-		'''	
+		'''	Returns the SHA1 hashsum of the file given by filename'''	
+
 		# Keep memory usage down by reading in small 256 kb chunks
 		buffer_size = 262144  
 
@@ -192,10 +197,7 @@ class sabas_core():
 
 
 	def write_cline(self):
-		''''
-			This function does the actual writing to USB using the Linux dd command			
-			
-		'''
+		'''This function does the actual writing to USB using the Linux dd command'''
 
 		# If we already have the filename from command line, continue
 		if self.iso_filename == None:
@@ -217,8 +219,8 @@ class sabas_core():
 
 	def write_dd(self, filename, write_process = None):
 		'''
-			Does the actual writing, this can be called from either the command
-			line or the GUI
+		Does the actual writing, this can be called from either the command
+		line or the GUI
 		'''
 		our_filename = filename
 
