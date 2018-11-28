@@ -22,20 +22,12 @@ class sabas_core():
 		# Handle Ctrl-C a bit more cleanly
 		signal.signal(signal.SIGINT, self.signal_handler)
 
-
 	def signal_handler(self, sig, frame):
+		''' Handles Ctrl+C being pressed and exits the program '''
+		
 		print('\n\nYou pressed Ctrl+C. Exiting.\n')
 		exit()
 
-	def check_sudo(self):
-		''' 
-			Checks the uid of the running process to check if
-			we have sudo priviliges for dd
-
-			Currently unused
-		'''
-		if(os.getuid() > 0):
-			raise ValueError("Please run with sudo.")
 
 	def find_drives(self):
 		'''
@@ -66,10 +58,14 @@ class sabas_core():
 
 			self.drive_data.append((i, name, label, size))
 
+
 	def create_drive_list(self):
 		''' 
 			 Creates a list of drives that can be used by the interface or the command line
+
+			 Returns the list of drives found
 		'''
+
 		drive_list = []
 		for drive in self.drive_data:
 			drive_list.append("[" + str(drive[0]) + "] " + str(drive[1]) + " " + "{:1.2f}".format(drive[3])  + " GB")
@@ -89,8 +85,6 @@ class sabas_core():
 
 		self.selection =  "/dev/" + self.drive_name
 
-		# print("Selected : " + self.selection)
-
 
 	def drive_selection(self):
 		'''
@@ -109,6 +103,7 @@ class sabas_core():
 
 		self.set_selection(user_selection)
 
+
 	def hd_check(self):
 		'''
 			Checks to make sure the selected drive isn't a hard-drive
@@ -126,7 +121,6 @@ class sabas_core():
 			Checks the status of the selected drive and its mount status	
 
 			Attempts to unmount the selected drive
-
 		'''
 			
 		print("Checking if " + self.selection + " is mounted...")
@@ -177,17 +171,24 @@ class sabas_core():
 		# return (md5.hexdigest(), sha1.hexdigest())
 		return sha1.hexdigest()
 
-	# This function taken from 
+	# This function modified from 
 	# https://stackoverflow.com/a/14822210/10354589
 	def convert_size(self, size_bytes):
+		''' Takes a size in bytes and creates a string with sensible units '''
+		
 		if size_bytes == 0:
 			return "0 B"
+		
 		size_name = ("B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB")
+		
 		i = int(math.floor(math.log(size_bytes, 1024)))
+		
 		p = math.pow(1024, i)
+		
 		s = round(size_bytes / p, 2)
 		
 		return "%s %s" % (s, size_name[i])
+
 
 
 	def write_cline(self):
@@ -205,7 +206,7 @@ class sabas_core():
 
 		while confirmation not in valid_confirmations:
 			confirmation = input("Are you sure you want to continue and write " + self.iso_filename + "to " + self.selection + "? [y / n] : ")
-			# print(confirmation)
+
 		if confirmation == "y" or confirmation == "Y":
 			self.write_dd(self.iso_filename)
 			
@@ -213,7 +214,7 @@ class sabas_core():
 			print("Exiting.")
 			exit()
 
-	# def write_dd(self, filename, progress_callback):
+
 	def write_dd(self, filename, write_process = None):
 		'''
 			Does the actual writing, this can be called from either the command
@@ -221,20 +222,25 @@ class sabas_core():
 		'''
 		our_filename = filename
 
-		write_process.start("sudo dd bs=4M if=" + our_filename + " of=" + self.selection + " status=progress oflag=sync")
+		status = write_process.start("sudo dd bs=4M if=" + our_filename + " of=" + self.selection + " status=progress oflag=sync")
 
-		# try:
-			# result = subprocess.check_output("sudo dd bs=4M if=" + our_filename + " of=" + self.selection + " status=progress oflag=sync", shell=True)
+		if status == 0:
+			print("Write successful")
+		elif status == 1:
+			print("Error writing to device")
 
-		# except subprocess.CalledProcessError as err:
-		# 	print("Error writing to device. Error : " + err.output)
+
 
 	def run(self):
-		# self.process_arguments(arguments)
 		self.find_drives()
+
 		if self.cline_flag == False:
 			self.drive_selection()
+
 		self.mount_checks()
+
 		self.hd_check()
+
 		self.write_cline()
+
 		exit()

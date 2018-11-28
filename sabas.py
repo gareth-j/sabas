@@ -4,15 +4,16 @@ import math
 import hashlib
 import argparse
 
-from PyQt5.QtCore import QDateTime, Qt, QTimer, pyqtSignal, QThreadPool, QProcess
-from PyQt5.QtWidgets import (QFileDialog, QApplication, QCheckBox, QComboBox, QDateTimeEdit,
-        QDial, QDialog, QGridLayout, QGroupBox, QHBoxLayout, QLabel, QLineEdit,
-        QProgressBar, QPushButton, QRadioButton, QScrollBar, QSizePolicy,
-        QSlider, QSpinBox, QStyleFactory, QTableWidget, QTabWidget, QTextEdit,
-        QVBoxLayout, QWidget, QMainWindow, QMessageBox, QInputDialog)
+from PyQt5.QtCore import Qt, QTimer, QProcess
 
-from PyQt5.QtGui import QPalette, QColor
+from PyQt5.QtWidgets import (QFileDialog, QApplication, QCheckBox, QComboBox,
+        QDialog, QGridLayout, QGroupBox, QHBoxLayout, QLabel, QLineEdit,
+        QProgressBar, QPushButton, QTextEdit, QVBoxLayout, QWidget, 
+        QMainWindow, QMessageBox, QInputDialog)
 
+# Currently unused
+# QStyleFactory
+# from PyQt5.QtGui import QPalette, QColor
 
 from sabas_core import sabas_core
 
@@ -33,7 +34,7 @@ class sabas(QMainWindow):
 	# Filename for ISO file to be written to USB
 	iso_filename = None
 	# Use the command line or GUI version?
-	cline_flag = False
+	# cline_flag = False
 	# Should we check SHA1 
 	checksum_flag = False	
 
@@ -42,21 +43,26 @@ class sabas(QMainWindow):
 		# self.check_sudo()
 		self.process_arguments(sys.argv)
 
+
+
 	def check_sudo(self):
-		''' 
-			Checks the uid of the running process to check if
-			we have sudo priviliges for dd
-		'''
+		''' Checks if the program has uid of greater than zero for sudo privileges'''
+
 		if os.getuid() > 0:
 			raise ValueError("Please run with sudo.")
 
 
 	def process_arguments(self, args=None):
-		'''
-			Handles passed arguments or lack thereof.
-
+		''' Handles passed arguments or lack thereof.
+	
 			If command line arguments are passed, there's no need for the GUI
 			to be loaded, everything can be done on the command line
+
+			Arguments:
+
+			args -- arguments taken from the command line
+					by sys.argv			
+
 		'''
 		
 		parser = argparse.ArgumentParser(description="Sabas - a small ISO to USB writing tool")
@@ -69,10 +75,8 @@ class sabas(QMainWindow):
 		if args.input and args.output is None:
    			parser.error("If using command lines both input and output parameters must be passed.")
 		elif args.input and args.output:
-			# self.cline_flag = True
+			
 			self.sabas_obj.cline_flag = True
-			# print("We have arguments!")
-
 			# Check the input file exists
 			if not os.path.isfile(args.input):
 				raise FileNotFoundError(args.input + " not found.")
@@ -86,108 +90,113 @@ class sabas(QMainWindow):
 
 			self.sabas_obj.run()
 
-		# Start the GUI
 		else:
+			# Start the GUI
 			self.setup_gui()
 			self.initial_selection()
-			self.setup_threads()
-
+			
 
 	def initial_selection(self):
-		'''
-			Sets the first drive found to the selected one
-		'''
-		# self.sabas_obj._write_status = 5
+		'''	Sets the first drive found to the selected one '''
 
-		self.selectDrive(0)
-		self.refreshDriveInfo()	
+		self.select_drive(0)
+		self.refresh_drive_info()	
 
 
-	def setup_threads(self):
-		# Create a threadpool
-		self.threadpool = QThreadPool()
-		print("Multithreading with maximum %d threads" % self.threadpool.maxThreadCount())
-
-	# Replace with actual get drive function
 	def get_drives(self):
-		'''	
-			Returns names and basic info about attached USB drives
+		'''	 Returns names and basic info about attached USB drives	'''
 
-		'''
 		self.sabas_obj.find_drives()
 		return self.sabas_obj.create_drive_list()
 
 
 	def checksum_state_changed(self, val):
+		''' Do we want to calculate the checksum of the ISO to be written '''
+
 		if val:
 			self.checksum_flag = True
 		else:
 			self.checksum_flag = False
 
 	def setup_gui(self):
+		'''	 This function creates the structure of the interface.
+
+			 Each of the main sections are created in their own separate
+			 function for modularity.
+
+		'''
 
 		self.setWindowTitle("Sabas")
 
-		driveComboBox = QComboBox()
-		driveComboBox.addItems(self.get_drives())
+		drive_combobox = QComboBox()
+		drive_combobox.addItems(self.get_drives())
 
-		driveLabel = QLabel("&Drive :")
-		driveLabel.setBuddy(driveComboBox)
+		drive_label = QLabel("&Drive :")
+		drive_label.setBuddy(drive_combobox)
 
-		driveComboBox.activated[int].connect(self.selectDrive)
+		drive_combobox.activated[int].connect(self.select_drive)
 
-		driveComboBox.currentIndexChanged.connect(self.selectDrive)
-		driveComboBox.currentIndexChanged.connect(self.refreshDriveInfo)
+		drive_combobox.currentIndexChanged.connect(self.select_drive)
+		drive_combobox.currentIndexChanged.connect(self.refresh_drive_info)
 		
-		checksumsCheckBox = QCheckBox("&Check checksums")
+		checksums_checkbox = QCheckBox("&Check checksums")
 
-		checksumsCheckBox.stateChanged.connect(self.checksum_state_changed)
+		checksums_checkbox.stateChanged.connect(self.checksum_state_changed)
 
-		topLayout = QHBoxLayout()
-		topLayout.addWidget(driveLabel)
-		topLayout.addWidget(driveComboBox)
-		topLayout.addStretch(1)
-		topLayout.addWidget(checksumsCheckBox)
+		# Create a layout for the top line
+		top_layout = QHBoxLayout()
+		top_layout.addWidget(drive_label)
+		top_layout.addWidget(drive_combobox)
+		top_layout.addStretch(1)
+		top_layout.addWidget(checksums_checkbox)
+
+		# Create a process for writing
+		self.write_process = QProcess(self)
 
 		# Top line is independent of these functions and is added below
+		
 		# Create each group in turn
-		self.createDriveInfoBox()
-		self.createISOInfoBox()
-		self.createConfirmationBox()
-		self.createProgressBar()
+		self.create_drive_box()
+		self.create_ISO_box()
+		self.create_conf_box()
+
+		self.progress_bar = QProgressBar()
+		self.progress_bar.setRange(0, 100)
+		self.progress_bar.setValue(0)
 
 		# Put this into a View menu
 		# self.useStylePaletteCheckBox.toggled.connect(self.changePalette)
 
-		wid = QWidget(self)
-		self.setCentralWidget(wid)
+		# Need a central widget so we're not operating
+		# directly on a QMainWindow
+		main_widget = QWidget(self)
+		self.setCentralWidget(main_widget)
 
 		# Main grid, add the top line to this grid
-		mainLayout = QGridLayout()
+		main_layout = QGridLayout()
 
-		mainLayout.addLayout(topLayout, 0, 0, 1, 2)
-		mainLayout.addWidget(self.DriveInfoBox, 1, 0)
-		mainLayout.addWidget(self.ISOInfoBox, 1, 1)
-		mainLayout.addWidget(self.confirmationBox, 2, 0)
-		mainLayout.addWidget(self.progress_bar, 2, 1)
+		main_layout.addLayout(top_layout, 0, 0, 1, 2)
+		main_layout.addWidget(self.drive_box, 1, 0)
+		main_layout.addWidget(self.iso_box, 1, 1)
+		main_layout.addWidget(self.conf_box, 2, 0)
+		main_layout.addWidget(self.progress_bar, 2, 1)
 
 
-		mainLayout.setRowStretch(0, 1)
-		mainLayout.setRowStretch(1, 1)
-		mainLayout.setRowStretch(2, 0)
-		mainLayout.setRowStretch(3, 0)
+		main_layout.setRowStretch(0, 1)
+		main_layout.setRowStretch(1, 1)
+		main_layout.setRowStretch(2, 0)
+		main_layout.setRowStretch(3, 0)
 
-		mainLayout.setColumnStretch(0, 1)
-		mainLayout.setColumnStretch(1, 1)
+		main_layout.setColumnStretch(0, 1)
+		main_layout.setColumnStretch(1, 1)
 
 		# Set a status bar
 		self.statusbar = self.statusBar()
 		self.update_statusbar("Ready")
 
-		# Create a process for writing
-		self.write_process = QProcess(self)
+
 		
-		wid.setLayout(mainLayout)
+		main_widget.setLayout(main_layout)
 
 
 	# Thse can be incorporated into a View -> Theme menu option
@@ -203,7 +212,7 @@ class sabas(QMainWindow):
 	# 	    QApplication.setPalette(self.originalPalette)
 
 
-	def selectDrive(self, drive_number):
+	def select_drive(self, drive_number):
 		'''
 			Selects the drive we want to use
 		'''
@@ -220,88 +229,94 @@ class sabas(QMainWindow):
 	def get_file_info(self):
 		'''	
 			Returns a properly formatted string of text
-			to be used in ISODetailText() and createISOInfoBox()
-
-			Return : string
+			to be used in ISO_info_text() and create_ISO_box()
+			
 		'''
 
-		# Save this for use with progress bar
+		# Get file information and save for later use
 		self.iso_fstat = os.stat(self.iso_filename)
 
-		file_stat = "Filename : " + self.iso_filename + "\n" \
-					"Size : " + self.sabas_obj.convert_size(self.iso_fstat.st_size) + "\n"
-					
+		# Get just the filename from the absolute path
+		filename = self.iso_filename.split("/")[-1]
+
+		file_info = "Filename : " + filename + "\n" \
+					"Size : " + self.sabas_obj.convert_size(self.iso_fstat.st_size) + "\n"					
 		
 
 		if self.checksum_flag:
 			self.update_statusbar("Calculating checksum...")
+			
 			self.sha1_checksum = self.sabas_obj.get_checksum(self.iso_filename)
-			file_stat += "SHA1 : " + self.sha1_checksum
+			
+			file_info += "SHA1 : " + self.sha1_checksum
+			
 			self.update_statusbar("Checksum calculated")
 
-		return file_stat
+		return file_info
 
 		
-	def getDriveInfo(self):
+	def get_drive_info(self):
 		'''	
 			Returns a properly formatted string of text
-			to be used in DriveDetailText() and createDriveInfoBox()
+			to be used in drive_detail_text() and create_drive_box()
 
-			Return : string
 		'''
 
 		# Parse the drive data, set the mount point and display size nicely
 		drive_number = self.drive_selected
-		drive_name = str(self.sabas_obj.drive_data[drive_number][1])
-		self.dev_name = str(self.sabas_obj.drive_data[drive_number][2])
-		size = self.sabas_obj.drive_data[drive_number][3]
 
-		tidy_info = "Drive number " + str(drive_number) + " selected" + "\n" \
+		drive_name = str(self.sabas_obj.drive_data[drive_number][1])
+		
+		self.dev_name = str(self.sabas_obj.drive_data[drive_number][2])
+		
+		drive_size = self.sabas_obj.drive_data[drive_number][3]
+
+		drive_info = "Drive number " + str(drive_number) + " selected" + "\n" \
 					"Drive name : " + drive_name + "\n" \
 					"Device : /dev/" + self.dev_name + "\n" \
-					"Size : " + "{:1.3f}".format(size) + " GB"
+					"Size : " + "{:1.3f}".format(drive_size) + " GB"
 		
-		return tidy_info
+		return drive_info
 
 
 
-	# This will go top left
-	def createDriveInfoBox(self):
+
+	def create_drive_box(self):
 		'''
 			This creates the box display information about the drive
-			Size, name, manufacturer etc
+			size, name, manufacturer etc
 
 		'''
-		self.DriveInfoBox = QGroupBox("Drive details")
+		self.drive_box = QGroupBox("Drive details")
 
-		self.DriveDetailText = QTextEdit()
-		self.DriveDetailText.setPlainText(self.drive_info)
-		self.DriveDetailText.setReadOnly(True)
+		self.drive_detail_text = QTextEdit()
+		self.drive_detail_text.setPlainText(self.drive_info)
+		self.drive_detail_text.setReadOnly(True)
 
 		# Have a vertical box layout
 		layout = QVBoxLayout()
-		layout.addWidget(self.DriveDetailText)
+		layout.addWidget(self.drive_detail_text)
 		layout.addStretch(1)
-		self.DriveInfoBox.setLayout(layout)
+
+		self.drive_box.setLayout(layout)
 
 
 
-	def refreshDriveInfo(self):
+	def refresh_drive_info(self):
 		'''
 			Used to update the information shown about the drive
 			with changes in the combobox selection
 		'''
-		self.drive_info = self.getDriveInfo()
-		self.DriveDetailText.setPlainText(self.drive_info)
+		self.drive_info = self.get_drive_info()
+		self.drive_detail_text.setPlainText(self.drive_info)
 
 	
-	def refreshFileInfo(self):
+	def refresh_file_info(self):
 		''' 
 			Refreshes the file information about the selected ISO
 		'''
-		# print("Refreshing file info")
 		self.file_info = self.get_file_info()
-		self.ISODetailText.setPlainText(self.file_info)
+		self.ISO_info_text.setPlainText(self.file_info)
 
 	def compare_checksums(self):
 		given_sha1, okPressed = QInputDialog.getText(self, "Checksum","Please enter the SHA1 checksum: ", QLineEdit.Normal, "")
@@ -321,7 +336,7 @@ class sabas(QMainWindow):
 	def write_usb(self):
 		'''	
 			Confirms the write decision with the user and then
-			calls dd to write to the drive
+			calls the writing functions to write to the drive
 		'''
 
 		filename = self.iso_filename.split("/")[-1]
@@ -343,95 +358,100 @@ class sabas(QMainWindow):
 
 
 	def get_status(self):
+		''' Gets the status of the write and updates the status bar and progress bar '''
+		
 		# As readAll returns a QByteArray we need to decode it
 		dd_bytes = self.write_process.readAll()
+		
 		dd_output = str(dd_bytes.data(), encoding="utf-8")
 		
-		# Update progress bar and the statusbar
+		# Update progress bar and the status bar
 		self.update_progress(dd_output)
+		
 		self.update_statusbar(dd_output)
 
 
 	def do_write(self):
+		''' Sets up the QProcess for writing and calls the
+			sabas_core function write_dd to write the file to drive
+		'''
+
 		# So we read everything coming out of dd
 		self.write_process.setProcessChannelMode(QProcess.MergedChannels)		
 
+		# Pass the QProcess and filename to the sabas_core function
 		self.sabas_obj.write_dd(self.iso_filename, self.write_process)
 
-		# self.write_process.start("ping 127.0.0.1")
-
+		# Connect the writing process with the status update function
 		self.write_process.readyRead.connect(self.get_status)
 
-		# self.write_process.started.connect(lambda: self.write_button.setEnabled(False))
-		self.write_process.finished.connect(lambda: self.update_statusbar("Finished"))
-	
+		self.write_process.started.connect(lambda: self.write_button.setDisabled(True))
+		self.write_process.finished.connect(lambda: self.update_statusbar("Finished"))	
 
 
-	# Top right
-	def createISOInfoBox(self):
+	def create_ISO_box(self):
 		'''
 			This creates the box display information
 			about the ISO, size, checksums etc
 		'''
-		self.ISOInfoBox = QGroupBox("ISO details")
+		self.iso_box = QGroupBox("ISO details")
 
-		self.ISODetailText = QTextEdit()
-		self.ISODetailText.setPlainText(self.file_info)
-		self.ISODetailText.setReadOnly(True)
+		self.ISO_info_text = QTextEdit()
+		self.ISO_info_text.setPlainText(self.file_info)
+		self.ISO_info_text.setReadOnly(True)
 
 		# Have a vertical box layout
 		layout = QVBoxLayout()
-		layout.addWidget(self.ISODetailText)
+		layout.addWidget(self.ISO_info_text)
 		layout.addStretch(1)
-		self.ISOInfoBox.setLayout(layout)   
+
+		self.iso_box.setLayout(layout)   
 
 
-	def fileOpenDialog(self):
+	def file_open_dialog(self):
+		'''
+			Sets the file dialog window settings and controls 
+			button activation
+		'''
+
 		try:
-			fname = QFileDialog.getOpenFileName(self, 'Open file', '~')
-			self.iso_filename = fname[0]
+			filename = QFileDialog.getOpenFileName(self, 'Open file', '~')
+		
+			self.iso_filename = filename[0]
 			self.file_info = self.get_file_info()
+		
 			# Refresh the file information box
 			self.write_button.setDisabled(False)
-			self.refreshFileInfo()
+			
+			# Update the ISO info text
+			self.refresh_file_info()
+		
 		except OSError as e:
 			print("Error, no file selected.")
 
 
-	def createConfirmationBox(self):
-		self.confirmationBox = QGroupBox("File")
+	def create_conf_box(self):
+		''' Creates the box containing the Open and Write buttons '''
+
+		self.conf_box = QGroupBox("File")
 
 		# Make some buttons
 		open_button = QPushButton("Open")
 		self.write_button = QPushButton("Write")
-		self.cancel_button = QPushButton("Cancel")
 
 		# Connect some buttons
-		open_button.clicked.connect(self.fileOpenDialog)
+		open_button.clicked.connect(self.file_open_dialog)
 		self.write_button.clicked.connect(self.write_usb)
 
-		# This should cancel the dd process
-
-		# self.cancel_button.clicked.connect()
-
-		# As we don't have anything to write or cancel initially
-		# disable these buttons
+		# Initially set to be disabled		
 		self.write_button.setDisabled(True)
-		self.cancel_button.setDisabled(True)
-				
-		# Horizontal baby
-		confLayout = QHBoxLayout()
-		confLayout.addWidget(open_button)
-		confLayout.addWidget(self.write_button)
-		confLayout.addStretch(1)
 
-		self.confirmationBox.setLayout(confLayout)
+		conf_layout = QHBoxLayout()
+		conf_layout.addWidget(open_button)
+		conf_layout.addWidget(self.write_button)
+		conf_layout.addStretch(1)
 
-
-	def createProgressBar(self):
-		self.progress_bar = QProgressBar()
-		self.progress_bar.setRange(0, 100)
-		self.progress_bar.setValue(0)
+		self.conf_box.setLayout(conf_layout)
 	
 
 	def update_progress(self, dd_output):
@@ -442,7 +462,8 @@ class sabas(QMainWindow):
 		# Get the size of the file in bytes
 		iso_in_bytes = self.iso_fstat.st_size
 
-		dd_list = dd_output.split()
+		# We only want the number of bytes transferred
+		dd_list = dd_output.split()	
 
 		progress = 0
 
@@ -450,15 +471,10 @@ class sabas(QMainWindow):
 		if len(dd_list) > 0:
 			bytes_written = dd_list[0]
 
+			# Make sure it's not some weird output
 			if bytes_written.isdigit():
 				progress = 100 * (int(bytes_written)/int(iso_in_bytes));
-
-		self.progress_bar.setValue(progress)
-
-
-
-
-
+				self.progress_bar.setValue(progress)
 
 
 if __name__ == '__main__':
