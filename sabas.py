@@ -7,11 +7,13 @@ from PyQt5.QtCore import QProcess
 from PyQt5.QtWidgets import (QFileDialog, QApplication, QCheckBox, QComboBox,
 							QGridLayout, QGroupBox, QHBoxLayout, QLabel, QLineEdit,
 							QProgressBar, QPushButton, QTextEdit, QVBoxLayout, QWidget, 
-							QMainWindow, QMessageBox, QInputDialog)
+							QMainWindow, QMessageBox, QInputDialog, QAction)
 
 # Currently unused
 # QStyleFactory
-# from PyQt5.QtGui import QPalette, QColor
+from PyQt5.QtGui import QIcon
+
+ # QPalette, QColor
 
 from sabas_core import sabas_core
 
@@ -143,6 +145,42 @@ class sabas(QMainWindow):
 
 		self.setWindowTitle("Sabas")
 
+		# TODO - create icon
+		# self.setWindowIcon(QIcon("img/icon.svg"))
+
+		# # Setup the menu bar
+		# main_menu = self.menuBar()
+		# file_menu = main_menu.addMenu("&File")
+		# edit_menu = main_menu.addMenu("&Edit")
+		# view_menu = main_menu.addMenu("&View")
+
+		# # File menu
+		# open_act = QAction('Open', self)
+		# open_act.setShortcut('Ctrl+O')
+		# open_act.setStatusTip('Open file')
+		# open_act.triggered.connect(self.file_open_dialog)
+
+		# exit_act = QAction('Exit', self)
+		# exit_act.setShortcut('Ctrl+Q')
+		# exit_act.setStatusTip('Exit application')
+		# exit_act.triggered.connect(self.close)
+
+
+		# file_menu.addAction(open_act)
+		# file_menu.addAction(exit_act)
+
+		# # Edit
+		# pref_act = QAction('Preferences', self)
+		# pref_act.setStatusTip('Edit preferences')
+		# pref_act.triggered.connect()
+
+		# Show a preferences window can edit things like 
+		# partition type/filesystem to write to drive when restoring
+		edit_menu.addAction(pref_act)
+
+		# In this window 
+
+
 		drive_combobox = QComboBox()
 		drive_combobox.addItems(self.get_drives())
 
@@ -208,7 +246,6 @@ class sabas(QMainWindow):
 		# Set a status bar
 		self.statusbar = self.statusBar()
 		self.update_statusbar("Ready")
-
 
 		
 		main_widget.setLayout(main_layout)

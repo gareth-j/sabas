@@ -207,7 +207,7 @@ class sabas_core():
 		valid_confirmations = ["y", "Y", "n", "N"]
 
 		while confirmation not in valid_confirmations:
-			confirmation = input("Are you sure you want to continue and write " + self.iso_filename + "to " + self.selection + "? [y / n] : ")
+			confirmation = input("Are you sure you want to continue and write " + self.iso_filename + "to " + self.selection + "? (y / n) : ")
 
 		if confirmation == "y" or confirmation == "Y":
 			self.write_dd(self.iso_filename)
@@ -224,12 +224,48 @@ class sabas_core():
 		'''
 		our_filename = filename
 
-		status = write_process.start("sudo dd bs=4M if=" + our_filename + " of=" + self.selection + " status=progress oflag=sync")
+		status = 0
+		# If we have a QProcess to write with (passed in from the GUI)
+		if write_process:
+			status = write_process.start("sudo dd bs=4M if=" + our_filename + " of=" + self.selection + " status=progress oflag=sync")
+		else:
+			status = subprocess.check_output("sudo dd bs=4M if=" + our_filename + " of=" + self.selection \
+											+ " status=progress oflag=sync", shell=True).decode("utf-8")
+
 
 		if status == 0:
 			print("Write successful")
 		elif status == 1:
 			print("Error writing to device")
+
+
+
+	def create_storage_drive(self, write_process=None):
+
+		print("Warning - this will wipe everything from the drive and create an exFAT filesystem.")
+
+		valid_confirmations = ["y", "Y", "n", "N"]
+
+		while confirmation not in valid_confirmations:
+			confirmation = input("Are you sure you want to continue and write an exFAT partition to " + self.selection + "? (y / n) : ")
+
+		if confirmation == "y" or confirmation == "Y":
+			# Wipes all file systems from the drive
+			write_process.start("sudo wipefs --all " + self.selection)
+
+			# Creates an exFAT partition
+			write_process.start("sudo echo \"type=07\" | sudo sfdisk " + self.selection)
+
+			# Formats the partition
+			write_process.start("sudo mkfs.exfat " + self.selection)			
+			
+		elif confirmation == "n" or confirmation == "N":
+			print("Exiting.")
+			exit()
+
+		
+
+		
 
 
 
