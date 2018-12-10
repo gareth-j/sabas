@@ -84,14 +84,17 @@ class sabas(QMainWindow):
 		parser = argparse.ArgumentParser(description="Sabas - a small ISO to USB writing tool")
 		parser.add_argument("-i", "--input", type=str, help="Used to specify the input file")
 		parser.add_argument("-o", "--output", type=str, help="Used to specify the drive to write to")
+		parser.add_argument("-s", "--storage", type=str, help="Used to create storage drive, used in conjunction with -f.\nExample -s /dev/sdX")
+		parser.add_argument("-f", "--filesystem", type=str, help="Optional. Options are fat32, ntfs or exfat. Defaults to ntfs")
 		args = parser.parse_args()
 
 		# If the command line is going to be used instead of the GUI we need
 		# both input and output data
 		if args.input and args.output is None:
    			parser.error("If using command lines both input and output parameters must be passed.")
-		elif args.input and args.output:
-			
+
+   		# If we want to write an ISO straight to a drive
+		elif args.input and args.output and not args.storage:			
 			self.sabas_obj.cline_flag = True
 			# Check the input file exists
 			if not os.path.isfile(args.input):
@@ -100,15 +103,39 @@ class sabas(QMainWindow):
 			self.sabas_obj.iso_filename = args.input
 
 			# Check we have a decent drive path
-			if "/dev/" not in args.output:
+			if "/dev/" not in args.storage:
 				raise ValueError("Please input a correct drive name. For example /dev/sdc")
+
 			self.sabas_obj.selection = args.output
 
+			# Run the program from the command line
 			self.sabas_obj.run()
 
+		# If we want to wipe, repartition and format a drive
+		# Default to ntfs
+		elif args.storage:
+			
+			# Check we have a decent drive path
+			if "/dev/" not in args.storage:
+				raise ValueError("Please input a correct drive name. For example /dev/sdX")
+
+			self.sabas_obj.selection = args.storage
+
+			filesystem = ""
+			
+			if args.filesystem:
+				filesystem = args.filesystem.lower()
+			else:
+				filesystem = "ntfs"
+
+			self.sabas_obj.create_storage_drive(filesystem)
+			# Close after we've finished
+			exit()
+		
 		else:
 			# Start the GUI
 			self.setup_gui()
+			# Update drive information
 			self.initial_selection()
 			
 
@@ -176,7 +203,7 @@ class sabas(QMainWindow):
 
 		# Show a preferences window can edit things like 
 		# partition type/filesystem to write to drive when restoring
-		edit_menu.addAction(pref_act)
+		# edit_menu.addAction(pref_act)
 
 		# In this window 
 

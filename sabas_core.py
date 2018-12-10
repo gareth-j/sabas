@@ -239,29 +239,72 @@ class sabas_core():
 			print("Error writing to device")
 
 
+	def create_storage_drive(self, filesystem, write_process=None):
 
-	def create_storage_drive(self, write_process=None):
+		# Set the partition types we want to use with different filesystems
 
-		print("Warning - this will wipe everything from the drive and create an exFAT filesystem.")
+		partition_type = None
+		format_flag = " "
+		if filesystem == "fat32":
+			partition_type = "83"
+		elif filesystem == "ntfs":
+			partition_type = "07"
+			# For fast format of the NTFS partition
+			format_flag = " -f"
+		elif filesystem == "exfat":
+			partition_type = "07"
+		else:
+			raise ValueError("Error : incorrect filesystem selected.")
 
+		# Check that we're not trying to destroy a HD
+		self.hd_check()
+		# Ensure the drive isn't mounted
+		self.mount_checks()
+
+
+		print("Warning - this will wipe everything from the drive and create a " + filesystem + " filesystem.")
+
+		confirmation = ""
 		valid_confirmations = ["y", "Y", "n", "N"]
 
 		while confirmation not in valid_confirmations:
-			confirmation = input("Are you sure you want to continue and write an exFAT partition to " + self.selection + "? (y / n) : ")
+			confirmation = input("Are you sure you want to continue and write a " + filesystem + " partition to " + self.selection + "? (y / n) : ")
 
 		if confirmation == "y" or confirmation == "Y":
-			# Wipes all file systems from the drive
-			write_process.start("sudo wipefs --all " + self.selection)
-
-			# Creates an exFAT partition
-			write_process.start("sudo echo \"type=07\" | sudo sfdisk " + self.selection)
-
-			# Formats the partition
-			write_process.start("sudo mkfs.exfat " + self.selection)			
+			if write_process:
+				try:
+					# Wipes all file systems from the drive
+					write_process.start("sudo wipefs -a " + self.selection)
+					# Creates a partition
+					write_process.start("sudo echo \"type=" + partition_type + "\" | sudo sfdisk " + self.selection)
+					# Formats the partition
+					write_process.start("sudo mkfs." + filesystem + format_flag + self.selection + "1")
+				except:
+					print("Error writing to drive.")
+					exit()
 			
+			# If we're running this from the command line and don't have a QProcess			
+			else:
+				try:					
+					# Wipes all file systems from the drive
+					print("Wiping drive...")
+					status = subprocess.check_output("sudo wipefs --all " + self.selection, shell=True).decode("utf-8")
+					# Creates a partition
+					print("Creating partition...")
+					status = subprocess.check_output("sudo echo \"type=" + partition_type + "\" | sudo sfdisk " + self.selection, shell=True).decode("utf-8")
+					# Formats the partition
+					print("Formatting partition...")
+					status = subprocess.check_output("sudo mkfs." + filesystem + format_flag + self.selection + "1", shell=True).decode("utf-8")
+					print("Finished")
+				except subprocess.CalledProcessError:
+					print("Error writing to drive.")
+					exit()
+		
+
 		elif confirmation == "n" or confirmation == "N":
 			print("Exiting.")
 			exit()
+			
 
 		
 
