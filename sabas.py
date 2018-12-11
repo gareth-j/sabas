@@ -176,34 +176,34 @@ class sabas(QMainWindow):
 		# self.setWindowIcon(QIcon("img/icon.svg"))
 
 		# # Setup the menu bar
-		# main_menu = self.menuBar()
-		# file_menu = main_menu.addMenu("&File")
-		# edit_menu = main_menu.addMenu("&Edit")
-		# view_menu = main_menu.addMenu("&View")
+		main_menu = self.menuBar()
+		file_menu = main_menu.addMenu("&File")
+		edit_menu = main_menu.addMenu("&Edit")
+		view_menu = main_menu.addMenu("&View")
 
-		# # File menu
-		# open_act = QAction('Open', self)
-		# open_act.setShortcut('Ctrl+O')
-		# open_act.setStatusTip('Open file')
-		# open_act.triggered.connect(self.file_open_dialog)
+		# File menu
+		open_act = QAction('Open', self)
+		open_act.setShortcut('Ctrl+O')
+		open_act.setStatusTip('Open file')
+		open_act.triggered.connect(self.file_open_dialog)
 
-		# exit_act = QAction('Exit', self)
-		# exit_act.setShortcut('Ctrl+Q')
-		# exit_act.setStatusTip('Exit application')
-		# exit_act.triggered.connect(self.close)
+		exit_act = QAction('Exit', self)
+		exit_act.setShortcut('Ctrl+Q')
+		exit_act.setStatusTip('Exit application')
+		exit_act.triggered.connect(self.close)
 
 
-		# file_menu.addAction(open_act)
-		# file_menu.addAction(exit_act)
+		file_menu.addAction(open_act)
+		file_menu.addAction(exit_act)
 
-		# # Edit
-		# pref_act = QAction('Preferences', self)
-		# pref_act.setStatusTip('Edit preferences')
+		# Edit
+		pref_act = QAction('Preferences', self)
+		pref_act.setStatusTip('Edit preferences')
 		# pref_act.triggered.connect()
 
 		# Show a preferences window can edit things like 
 		# partition type/filesystem to write to drive when restoring
-		# edit_menu.addAction(pref_act)
+		edit_menu.addAction(pref_act)
 
 		# In this window 
 
@@ -374,7 +374,10 @@ class sabas(QMainWindow):
 		# Have a vertical box layout
 		layout = QVBoxLayout()
 		layout.addWidget(self.drive_detail_text)
-		layout.addStretch(1)
+
+		policy = self.drive_detail_text.sizePolicy()
+		policy.setVerticalStretch(1)
+		self.drive_detail_text.setSizePolicy(policy)
 
 		self.drive_box.setLayout(layout)
 
@@ -478,7 +481,11 @@ class sabas(QMainWindow):
 		# Have a vertical box layout
 		layout = QVBoxLayout()
 		layout.addWidget(self.iso_info_text)
-		layout.addStretch(1)
+
+		# Make sure it fills the column if the window is resized
+		policy = self.iso_info_text.sizePolicy()
+		policy.setVerticalStretch(1)
+		self.iso_info_text.setSizePolicy(policy)
 
 		self.iso_box.setLayout(layout)   
 
@@ -504,6 +511,11 @@ class sabas(QMainWindow):
 		except OSError as e:
 			print("Error, no file selected.")
 
+	# def call_format_restore(self):
+	# 	'''
+	# 		Controls the formatting of the drive to a USB storage device			
+	# 	'''
+
 
 	def create_conf_box(self):
 		''' Creates the box containing the Open and Write buttons '''
@@ -513,6 +525,7 @@ class sabas(QMainWindow):
 		# Make some buttons
 		open_button = QPushButton("Open")
 		self.write_button = QPushButton("Write")
+		# self.format_button = QPushButton("Format")
 
 		# Connect some buttons
 		open_button.clicked.connect(self.file_open_dialog)
