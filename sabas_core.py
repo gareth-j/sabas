@@ -225,18 +225,13 @@ class sabas_core():
 		our_filename = filename
 
 		status = 0
+
 		# If we have a QProcess to write with (passed in from the GUI)
 		if write_process:
 			status = write_process.start("sudo dd bs=4M if=" + our_filename + " of=" + self.selection + " status=progress oflag=sync")
 		else:
 			status = subprocess.check_output("sudo dd bs=4M if=" + our_filename + " of=" + self.selection \
 											+ " status=progress oflag=sync", shell=True).decode("utf-8")
-
-
-		if status == 0:
-			print("Write successful")
-		elif status == 1:
-			print("Error writing to device")
 
 
 	def create_storage_drive(self, filesystem, write_process=None):

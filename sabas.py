@@ -55,9 +55,8 @@ class sabas(QMainWindow):
 
 	def __init__(self, parent=None):
 		super(sabas, self).__init__(parent)
-		# self.check_sudo()
+		self.check_sudo()
 		self.process_arguments(sys.argv)
-
 
 
 	def check_sudo(self):
@@ -180,12 +179,18 @@ class sabas(QMainWindow):
 		file_menu = main_menu.addMenu("&File")
 		edit_menu = main_menu.addMenu("&Edit")
 		view_menu = main_menu.addMenu("&View")
+		# about = main_menu.addMenu("&About")
 
 		# File menu
 		open_act = QAction('Open', self)
 		open_act.setShortcut('Ctrl+O')
 		open_act.setStatusTip('Open file')
 		open_act.triggered.connect(self.file_open_dialog)
+
+		format_act = QAction("Format", self)
+		open_act.setShortcut('Ctrl+F')
+		open_act.setStatusTip('Format drive')
+		# open_act.triggered.connect(self.format_drive_menu)
 
 		exit_act = QAction('Exit', self)
 		exit_act.setShortcut('Ctrl+Q')
@@ -194,6 +199,8 @@ class sabas(QMainWindow):
 
 
 		file_menu.addAction(open_act)
+		file_menu.addAction(format_act)
+		file_menu.addSeparator()
 		file_menu.addAction(exit_act)
 
 		# Edit
@@ -227,7 +234,7 @@ class sabas(QMainWindow):
 		top_layout = QHBoxLayout()
 		top_layout.addWidget(drive_label)
 		top_layout.addWidget(drive_combobox)
-		top_layout.addStretch(1)
+		top_layout.addStretch(1)	
 		top_layout.addWidget(checksums_checkbox)
 
 		# Create a process for writing
@@ -523,19 +530,20 @@ class sabas(QMainWindow):
 		self.conf_box = QGroupBox("File")
 
 		# Make some buttons
-		open_button = QPushButton("Open")
+		self.open_button = QPushButton("Open")
 		self.write_button = QPushButton("Write")
+
 		# self.format_button = QPushButton("Format")
 
 		# Connect some buttons
-		open_button.clicked.connect(self.file_open_dialog)
+		self.open_button.clicked.connect(self.file_open_dialog)
 		self.write_button.clicked.connect(self.write_usb)
 
 		# Initially set to be disabled		
 		self.write_button.setDisabled(True)
 
 		conf_layout = QHBoxLayout()
-		conf_layout.addWidget(open_button)
+		conf_layout.addWidget(self.open_button)
 		conf_layout.addWidget(self.write_button)
 		conf_layout.addStretch(1)
 
